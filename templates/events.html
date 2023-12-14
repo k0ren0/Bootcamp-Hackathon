@@ -1,0 +1,20 @@
+<!-- events.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>Volunteer App - Events</title>
+</head>
+<body>
+    <h2>Available Events</h2>
+    <ul>
+        {% for event in events %}
+            <li>{{ event.name }} - {{ event.date }}</li>
+        {% endfor %}
+    </ul>
+    <!-- Other content goes here -->
+</body>
+</html>
