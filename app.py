@@ -7,6 +7,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired
 from wtforms import DateField
+from forms import RegistrationForm
+
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -80,10 +82,10 @@ def register():
         username = form.username.data
         password = form.password.data
 
-        # Хеширование пароля перед сохранением в базу данных
+        # Хеширование пароля перед сохранением в базе данных
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-        # Вставка данных в таблицу users
+        # Вставка данных в таблицу users с использованием Faker
         cursor.execute("""
             INSERT INTO users (username, password_hash, first_name, last_name, city, phone_number)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -100,9 +102,28 @@ def register():
         conn.commit()
 
         flash('Registration successful!', 'success')
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
 
     return render_template('register.html', form=form)
+
+# Удаление старой таблицы users (с учетом зависимостей)
+cursor.execute("DROP TABLE IF EXISTS users CASCADE")
+
+# Создание новой таблицы users
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        city VARCHAR(255),
+        phone_number VARCHAR(50)  -- Изменено на VARCHAR(50)
+    )
+""")
+
+# Сохранение изменений в базе данных
+conn.commit()
 
 # Вход пользователя
 @app.route('/login', methods=['GET', 'POST'])

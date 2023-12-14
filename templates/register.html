@@ -2,15 +2,17 @@
 {% block title %}Register{% endblock %}
 {% block content %}
 <h1>Registration Page</h1>
-<form method="post" action="{{ url_for('register') }}">
+<form method="POST" action="{{ url_for('register') }}">
+    {{ form.hidden_tag() }}
     <div class="form-group">
-        <label for="username">Username:</label>
-        <input type="text" class="form-control" id="username" name="username" required>
+        <label for="username">Username</label>
+        {{ form.username(class="form-control", id="username") }}
     </div>
     <div class="form-group">
-        <label for="password">Password:</label>
-        <input type="password" class="form-control" id="password" name="password" required>
+        <label for="password">Password</label>
+        {{ form.password(class="form-control", id="password") }}
     </div>
     <button type="submit" class="btn btn-primary">Register</button>
 </form>
+
 {% endblock %}
