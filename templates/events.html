@@ -1,10 +1,25 @@
 {% extends 'base.html' %}
+
 {% block title %}Events{% endblock %}
+
 {% block content %}
-<h1>Events List</h1>
-<ul class="list-group">
-    {% for event in events %}
-        <li class="list-group-item">{{ event.name }} - {{ event.date }}</li>
-    {% endfor %}
-</ul>
+<h2>Events</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Event Name</th>
+            <th scope="col">Event Date</th>
+            <th scope="col">Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for event in events %}
+            <tr>
+                <td>{{ event.name }}</td>
+                <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ event.description }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}
