@@ -164,7 +164,6 @@ cursor.execute("""
     )
 """)
 
-
 # Создание новой таблицы events
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS events (
