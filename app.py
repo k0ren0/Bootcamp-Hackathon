@@ -35,9 +35,19 @@ faker = Faker()
 
 # Класс для представления пользователя
 class User(UserMixin):
-    def __init__(self, id, username):
+    def __init__(self, id, username, role=None, additional_role=None):
         self.id = id
         self.username = username
+        self.role = role
+        self.additional_role = additional_role
+
+@login_manager.user_loader
+def load_user(user_id):
+    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    user_data = cursor.fetchone()
+    if user_data:
+        return User(id=user_data[0], username=user_data[1], role=user_data[6], additional_role=user_data[7])
+    return None
 
 # Заглушка для хранения пользователей (вместо использования БД для простоты)
 users = {}
@@ -50,21 +60,21 @@ def load_user(user_id):
 class EventForm(FlaskForm):
     event_name = StringField('Event Name', validators=[InputRequired()])
     event_date = DateField('Event Date', validators=[InputRequired()], format='%Y-%m-%d')
+    role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
     submit = SubmitField('Create Event')
 
 # Класс формы для регистрации
-class RegistrationForm(FlaskForm):
+class RegistrationFormCustom(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
     password = PasswordField('Password', validators=[InputRequired()])
-    role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
     submit = SubmitField('Register')
 
     def validate_username(self, field):
-        # Проверка уникальности логина
         cursor.execute("SELECT id FROM users WHERE username = %s", (field.data,))
         existing_user = cursor.fetchone()
         if existing_user:
             raise ValidationError('This username is already taken. Please choose a different one.')
+
 
 
 # Отображение главной страницы
@@ -85,45 +95,56 @@ def contact():
 # Отображение страницы регистрации
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    form = RegistrationForm()
+    form = RegistrationFormCustom()
 
     if form.validate_on_submit():
-        username = form.username.data
-        password = form.password.data
-        role = form.role.data
+        try:
+            username = form.username.data
+            password = form.password.data
 
-        # Проверка, что пользователь с таким именем пользователя и ролью не существует
-        cursor.execute("SELECT * FROM users WHERE username = %s AND role = %s", (username, role))
-        existing_user = cursor.fetchone()
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            existing_user = cursor.fetchone()
 
-        if existing_user:
-            flash('This username is already taken. Please choose a different one.', 'danger')
-            return redirect(url_for('register'))
+            if existing_user:
+                flash('This username already exists. Please choose a different one.', 'danger')
+                return render_template('register.html', form=form)
 
-        # Хеширование пароля перед сохранением в базе данных
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-        # Вставка данных в таблицу users с использованием Faker
-        cursor.execute("""
-            INSERT INTO users (username, password_hash, first_name, last_name, city, phone_number, role)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            username,
-            hashed_password,
-            faker.first_name(),
-            faker.last_name(),
-            faker.city(),
-            faker.phone_number(),
-            role
-        ))
+            # Используйте конкретные значения для роли и дополнительной роли
+            role = 'volunteer'
+            additional_role = None
 
-        # Сохранение изменений в базе данных
-        conn.commit()
+            cursor.execute("""
+                INSERT INTO users (username, password_hash, first_name, last_name, city, phone_number, role, additional_role)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                username,
+                hashed_password,
+                faker.first_name(),
+                faker.last_name(),
+                faker.city(),
+                faker.phone_number(),
+                role,
+                additional_role
+            ))
 
-        flash('Registration successful!', 'success')
-        return redirect(url_for('login'))
+            conn.commit()
+
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            new_user_data = cursor.fetchone()
+            new_user = User(id=new_user_data[0], username=new_user_data[1])
+            users[new_user.id] = new_user
+
+            flash('Registration successful!', 'success')
+            return redirect(url_for('login'))
+
+        except psycopg2.Error as e:
+            print(f"PostgreSQL error: {e}")
+            flash('An error occurred during registration. Please try again.', 'danger')
 
     return render_template('register.html', form=form)
+
 
 
 # # Удаление старой таблицы users (с учетом зависимостей)
@@ -139,7 +160,21 @@ cursor.execute("""
         last_name VARCHAR(255),
         city VARCHAR(255),
         phone_number VARCHAR(50),
-        role VARCHAR(10) NOT NULL
+        role VARCHAR(10) NOT NULL,
+        additional_role VARCHAR(10)
+    )
+""")
+
+
+# Создание новой таблицы events
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS events (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        date DATE NOT NULL,
+        description TEXT,
+        organizer_id INTEGER REFERENCES users(id),
+        role VARCHAR(20) NOT NULL
     )
 """)
 
@@ -161,9 +196,16 @@ def login():
         if user_data and bcrypt.check_password_hash(user_data[2], password):
             user = User(id=user_data[0], username=user_data[1])
             login_user(user)
-            return redirect(url_for('index'))
-    return render_template('login.html')
 
+            # Обновление заглушки users
+            users[user.id] = user
+
+            flash('Login successful!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password. Please try again.', 'danger')
+
+    return render_template('login.html')
 
 # Выход пользователя
 @app.route('/logout')
@@ -200,16 +242,18 @@ def create_event():
     if form.validate_on_submit():
         event_name = form.event_name.data
         event_date = form.event_date.data
+        role = form.role.data
 
         # Вставка данных в таблицу events
         cursor.execute("""
-            INSERT INTO events (name, date, description, organizer_id)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO events (name, date, description, organizer_id, role)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             event_name,
             event_date,
             faker.text(),
-            current_user.id  # Организатор - текущий пользователь
+            current_user.id,
+            role
         ))
 
         # Сохранение изменений в базе данных
@@ -217,8 +261,9 @@ def create_event():
 
         flash('Event created successfully!', 'success')
         return redirect(url_for('events_list'))
-    
+
     return render_template('create_event.html', form=form)
+
 
 # Обработчик ошибок
 @app.errorhandler(405)
