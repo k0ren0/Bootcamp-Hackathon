@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import psycopg2
 from faker import Faker
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, SelectField  # Изменено здесь
 from wtforms.validators import InputRequired
 from wtforms import DateField
 from forms import RegistrationForm
@@ -56,7 +56,9 @@ class EventForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
     password = PasswordField('Password', validators=[InputRequired()])
+    role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
     submit = SubmitField('Register')
+
 
 # Отображение главной страницы
 @app.route('/')
@@ -81,21 +83,23 @@ def register():
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
+        role = form.role.data
 
         # Хеширование пароля перед сохранением в базе данных
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
         # Вставка данных в таблицу users с использованием Faker
         cursor.execute("""
-            INSERT INTO users (username, password_hash, first_name, last_name, city, phone_number)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO users (username, password_hash, first_name, last_name, city, phone_number, role)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (
             username,
             hashed_password,
             faker.first_name(),
             faker.last_name(),
             faker.city(),
-            faker.phone_number()
+            faker.phone_number(),
+            role
         ))
 
         # Сохранение изменений в базе данных
@@ -106,8 +110,9 @@ def register():
 
     return render_template('register.html', form=form)
 
-# Удаление старой таблицы users (с учетом зависимостей)
-cursor.execute("DROP TABLE IF EXISTS users CASCADE")
+
+# # Удаление старой таблицы users (с учетом зависимостей)
+# cursor.execute("DROP TABLE IF EXISTS users CASCADE")
 
 # Создание новой таблицы users
 cursor.execute("""
@@ -118,7 +123,8 @@ cursor.execute("""
         first_name VARCHAR(255),
         last_name VARCHAR(255),
         city VARCHAR(255),
-        phone_number VARCHAR(50)  -- Изменено на VARCHAR(50)
+        phone_number VARCHAR(50),
+        role VARCHAR(10) NOT NULL
     )
 """)
 
@@ -206,5 +212,5 @@ def handle_405_error(e):
     return render_template('error.html', error_message="Method Not Allowed")
 
 if __name__ == '__main__':
-    app.secret_key = 'your_secret_key'
+    app.secret_key = 'Fudo2303'
     app.run(debug=True)
