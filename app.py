@@ -146,7 +146,6 @@ def register():
     return render_template('register.html', form=form)
 
 
-
 # # Удаление старой таблицы users (с учетом зависимостей)
 # cursor.execute("DROP TABLE IF EXISTS users CASCADE")
 
