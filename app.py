@@ -4,8 +4,8 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import psycopg2
 from faker import Faker
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField  # Изменено здесь
-from wtforms.validators import InputRequired
+from wtforms import StringField, PasswordField, SubmitField, SelectField 
+from wtforms.validators import InputRequired, ValidationError
 from wtforms import DateField
 from forms import RegistrationForm
 
@@ -59,6 +59,13 @@ class RegistrationForm(FlaskForm):
     role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
     submit = SubmitField('Register')
 
+    def validate_username(self, field):
+        # Проверка уникальности логина
+        cursor.execute("SELECT id FROM users WHERE username = %s", (field.data,))
+        existing_user = cursor.fetchone()
+        if existing_user:
+            raise ValidationError('This username is already taken. Please choose a different one.')
+
 
 # Отображение главной страницы
 @app.route('/')
@@ -84,6 +91,14 @@ def register():
         username = form.username.data
         password = form.password.data
         role = form.role.data
+
+        # Проверка, что пользователь с таким именем пользователя и ролью не существует
+        cursor.execute("SELECT * FROM users WHERE username = %s AND role = %s", (username, role))
+        existing_user = cursor.fetchone()
+
+        if existing_user:
+            flash('This username is already taken. Please choose a different one.', 'danger')
+            return redirect(url_for('register'))
 
         # Хеширование пароля перед сохранением в базе данных
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')

@@ -4,6 +4,11 @@
   <h1>Registration Page</h1>
   <form method="POST" action="{{ url_for('register') }}">
     {{ form.hidden_tag() }}
+    {% for message in form.username.errors %}
+      <div class="alert alert-danger">
+        {{ message }}
+      </div>
+    {% endfor %}
     <div class="form-group">
       <label for="username">Username</label>
       {{ form.username(class="form-control", id="username") }}
