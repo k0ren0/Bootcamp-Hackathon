@@ -8,6 +8,7 @@ from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import InputRequired, ValidationError
 from wtforms import DateField
 from forms import RegistrationForm
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -57,11 +58,19 @@ def load_user(user_id):
     return users.get(int(user_id))
 
 # Класс формы для создания ивента
+# Внесите следующие изменения в класс EventForm
 class EventForm(FlaskForm):
     event_name = StringField('Event Name', validators=[InputRequired()])
     event_date = DateField('Event Date', validators=[InputRequired()], format='%Y-%m-%d')
     role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
+    availability = StringField('Availability', validators=[InputRequired()])  # Новое поле
     submit = SubmitField('Create Event')
+
+    # Новое поле для указания свободных часов
+    availability = StringField('Availability', validators=[InputRequired()])
+
+    submit = SubmitField('Create Event')
+
 
 # Класс формы для регистрации
 class RegistrationFormCustom(FlaskForm):
@@ -172,7 +181,8 @@ cursor.execute("""
         date DATE NOT NULL,
         description TEXT,
         organizer_id INTEGER REFERENCES users(id),
-        role VARCHAR(20) NOT NULL
+        role VARCHAR(20) NOT NULL,
+        availability VARCHAR(255)  -- Добавленное поле для свободных часов
     )
 """)
 
@@ -231,6 +241,32 @@ def events_list():
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
+# Отображение мероприятий для волонтеров
+@app.route('/events/volunteer', methods=['GET'])
+@login_required
+def volunteer_events():
+    try:
+        cursor.execute("SELECT * FROM events WHERE role = 'volunteer'")
+        events = cursor.fetchall()
+        return render_template('events.html', events=events)
+    except Exception as e:
+        print(f"Error: {e}")
+        return render_template('error.html', error_message=str(e))
+
+# Отображение мероприятий для поисковиков
+@app.route('/events/finder', methods=['GET'])
+@login_required
+def finder_events():
+    try:
+        cursor.execute("SELECT * FROM events WHERE role = 'finder'")
+        events = cursor.fetchall()
+        return render_template('events.html', events=events)
+    except Exception as e:
+        print(f"Error: {e}")
+        return render_template('error.html', error_message=str(e))
+
+
+
 # Создание мероприятия
 @app.route('/create_event', methods=['GET', 'POST'])
 @login_required
@@ -241,27 +277,26 @@ def create_event():
         event_name = form.event_name.data
         event_date = form.event_date.data
         role = form.role.data
+        availability = form.availability.data
 
-        # Вставка данных в таблицу events
         cursor.execute("""
-            INSERT INTO events (name, date, description, organizer_id, role)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO events (name, date, description, organizer_id, role, availability)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             event_name,
             event_date,
             faker.text(),
             current_user.id,
-            role
+            role,
+            availability
         ))
 
-        # Сохранение изменений в базе данных
         conn.commit()
 
         flash('Event created successfully!', 'success')
         return redirect(url_for('events_list'))
 
     return render_template('create_event.html', form=form)
-
 
 # Обработчик ошибок
 @app.errorhandler(405)

@@ -1,25 +1,81 @@
 {% extends 'base.html' %}
 
-{% block title %}Events{% endblock %}
+{% block title %}События{% endblock %}
+
+{% block styles %}
+  <style>
+    /* Добавлены стили для разделения событий по ролям */
+    .volunteer-events {
+      display: none;
+    }
+    .finder-events {
+      display: none;
+    }
+  </style>
+{% endblock %}
 
 {% block content %}
-<h2>Events</h2>
-<table class="table">
-    <thead>
-        <tr>
-            <th scope="col">Event Name</th>
-            <th scope="col">Event Date</th>
-            <th scope="col">Description</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for event in events %}
-            <tr>
-                <td>{{ event.name }}</td>
-                <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ event.description }}</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+    <h2>События</h2>
+
+    <!-- Добавлены ссылки на фильтрованные страницы -->
+    <p><a href="{{ url_for('events_list') }}">Все события</a></p>
+    <p><a href="{{ url_for('volunteer_events') }}">События для волонтеров</a></p>
+    <p><a href="{{ url_for('finder_events') }}">События для поисковиков</a></p>
+
+    <!-- Добавлен фильтр для вывода информации в зависимости от роли пользователя -->
+    {% if current_user.is_authenticated %}
+        {% if current_user.role == 'volunteer' %}
+            <div class="volunteer-events">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Название события</th>
+                            <th scope="col">Дата события</th>
+                            <th scope="col">Описание</th>
+                            <th scope="col">Доступность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                            {% if event.role == 'volunteer' %}
+                                <tr>
+                                    <td>{{ event.name }}</td>
+                                    <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ event.description }}</td>
+                                    <td>{{ event.availability }}</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif current_user.role == 'finder' %}
+            <div class="finder-events">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Название события</th>
+                            <th scope="col">Дата события</th>
+                            <th scope="col">Описание</th>
+                            <th scope="col">Доступность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                            {% if event.role == 'finder' %}
+                                <tr>
+                                    <td>{{ event.name }}</td>
+                                    <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ event.description }}</td>
+                                    <td>{{ event.availability }}</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    {% else %}
+        <p>Пожалуйста, войдите, чтобы просмотреть события</p>
+    {% endif %}
 {% endblock %}

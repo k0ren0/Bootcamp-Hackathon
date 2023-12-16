@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Free Volunteers{% endblock %}
+
+{% block content %}
+    <!-- Содержание страницы Free Volunteers, если необходимо -->
+{% endblock %}
+
+{% block free_volunteers %}
+    <h2>Free Volunteers</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Username</th>
+                <th scope="col">City</th>
+                <th scope="col">Availability</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for volunteer in volunteers %}
+                <tr>
+                    <td>{{ volunteer.username }}</td>
+                    <td>{{ volunteer.city }}</td>
+                    <td>{{ volunteer.availability }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
