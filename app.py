@@ -217,7 +217,7 @@ def create_event():
 
         flash('Event created successfully!', 'success')
         return redirect(url_for('events_list'))
-
+    
     return render_template('create_event.html', form=form)
 
 # Обработчик ошибок
