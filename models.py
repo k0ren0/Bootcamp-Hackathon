@@ -13,12 +13,12 @@ class User(UserMixin):
         self.organized_events = organized_events if organized_events is not None else []
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    user_data = cursor.fetchone()
-    if user_data:
-        return User(id=user_data[0], username=user_data[1], password_hash=user_data[2],
-                    first_name=user_data[3], last_name=user_data[4], city=user_data[5],
-                    phone_number=user_data[6], role=user_data[7], additional_role=user_data[8])
-    return None
+# @login_manager.user_loader
+# def load_user(user_id):
+#     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+#     user_data = cursor.fetchone()
+#     if user_data:
+#         return User(id=user_data[0], username=user_data[1], password_hash=user_data[2],
+#                     first_name=user_data[3], last_name=user_data[4], city=user_data[5],
+#                     phone_number=user_data[6], role=user_data[7], additional_role=user_data[8])
+#     return None

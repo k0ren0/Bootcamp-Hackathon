@@ -8,6 +8,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField 
 from wtforms.validators import InputRequired, ValidationError
 from wtforms import DateField
+from flask_login import current_user
+
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -182,10 +184,22 @@ cursor.execute("""
         name VARCHAR(255) NOT NULL,
         date DATE NOT NULL,
         description TEXT,
-        organizer_id INTEGER REFERENCES users(id),
+        organizer_id INTEGER REFERENCES users(id),  -- Внешний ключ для связи с пользователем
         role VARCHAR(20) NOT NULL
-    )
+    );
 """)
+
+
+# Создание новой таблицы event_participants
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS event_participants (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),    -- Внешний ключ для связи с пользователем
+        event_id INTEGER REFERENCES events(id)   -- Внешний ключ для связи с мероприятием
+    );
+""")
+
+
 
 # Сохранение изменений в базе данных
 conn.commit()
@@ -240,7 +254,11 @@ def profile():
             user.city = user_data[4]
             user.phone_number = user_data[5]
 
-            return render_template('profile.html', user=user)
+            # Получение мероприятий пользователя
+            cursor.execute("SELECT * FROM events WHERE organizer_id = %s", (current_user.id,))
+            user_events = cursor.fetchall()
+
+            return render_template('profile.html', user=user, user_events=user_events)
         else:
             flash('User not found.', 'danger')
             return redirect(url_for('index'))
@@ -249,31 +267,110 @@ def profile():
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
-
+# @app.route('/events')
+# def events():
+#     return render_template('events.html')
 
 # Отображение списка мероприятий
-@app.route('/events', methods=['GET'])
-def events_list():
+@app.route('/events', methods=['GET', 'POST'])
+def events():
     try:
-        # Получение данных о мероприятиях из базы данных
-        cursor.execute("SELECT * FROM events")
-        events = cursor.fetchall()
+        if current_user.is_authenticated:
+            form = EventForm()  # Создание формы внутри условия
 
-        return render_template('events.html', events=events)
+            if request.method == 'POST' and form.validate_on_submit():
+                # Обработка данных формы, если запрос типа POST
+                event_name = form.event_name.data
+                event_date = form.event_date.data
+                role = form.role.data  # Получаем выбранную роль
+
+                # Вставка данных в таблицу events
+                cursor.execute("""
+                    INSERT INTO events (name, date, description, organizer_id, role)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    event_name,
+                    event_date,
+                    faker.text(),  # Пример описания, замените на реальное описание
+                    current_user.id,
+                    role  # Используем выбранную роль
+                ))
+
+                # Получение идентификатора только что созданного мероприятия
+                cursor.execute("SELECT lastval()")
+                event_id = cursor.fetchone()[0]
+
+                # Вставка данных в таблицу event_participants
+                cursor.execute("""
+                    INSERT INTO event_participants (user_id, event_id)
+                    VALUES (%s, %s)
+                """, (
+                    current_user.id,
+                    event_id
+                ))
+
+                # Сохранение изменений в базе данных
+                conn.commit()
+
+                flash(f'{role.capitalize()} Event created successfully!', 'success')
+                return redirect(url_for('events'))
+
+            # Получение данных о мероприятиях из базы данных в зависимости от роли пользователя
+            if current_user.role == 'volunteer':
+                cursor.execute("""
+                    SELECT e.* FROM events e
+                    JOIN event_participants ep ON e.id = ep.event_id
+                    WHERE e.role = 'volunteer' AND ep.user_id = %s
+                """, (current_user.id,))
+            elif current_user.role == 'finder':
+                cursor.execute("""
+                    SELECT e.* FROM events e
+                    JOIN event_participants ep ON e.id = ep.event_id
+                    WHERE e.role = 'finder' AND ep.user_id = %s
+                """, (current_user.id,))
+            else:
+                cursor.execute("SELECT * FROM events")
+            events = cursor.fetchall()
+
+            # Получение данных о мероприятиях для волонтеров
+            cursor.execute("""
+                SELECT e.* FROM events e
+                JOIN event_participants ep ON e.id = ep.event_id
+                WHERE e.role = 'volunteer' AND ep.user_id = %s
+            """, (current_user.id,))
+            volunteer_events = cursor.fetchall()
+
+            # Получение данных о мероприятиях для поисковиков
+            cursor.execute("""
+                SELECT e.* FROM events e
+                JOIN event_participants ep ON e.id = ep.event_id
+                WHERE e.role = 'finder' AND ep.user_id = %s
+            """, (current_user.id,))
+            finder_events = cursor.fetchall()
+
+            return render_template('events.html', events=events, volunteer_events=volunteer_events, finder_events=finder_events, form=form)
+        else:
+            flash('Please log in to view events.', 'info')
+            return redirect(url_for('login'))
     except Exception as e:
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
-# Создание мероприятия
-@app.route('/create_event', methods=['GET', 'POST'])
+# Класс формы для создания мероприятия волонтеров
+class VolunteerEventForm(EventForm):
+    # Можно добавить дополнительные поля, специфичные для мероприятий волонтеров
+    pass
+
+# Создание мероприятия для волонтеров
+@app.route('/volunteer_events', methods=['GET', 'POST'])
 @login_required
-def create_event():
-    form = EventForm()
+def volunteer_events():
+    form = VolunteerEventForm()  # Используем VolunteerEventForm
 
     if form.validate_on_submit():
         event_name = form.event_name.data
         event_date = form.event_date.data
-        role = form.role.data
+        role = form.role.data  # Получаем выбранную роль
 
         # Вставка данных в таблицу events
         cursor.execute("""
@@ -282,18 +379,79 @@ def create_event():
         """, (
             event_name,
             event_date,
-            faker.text(),
+            faker.text(),  # Пример описания, замените на реальное описание
             current_user.id,
-            role
+            role  # Используем выбранную роль
+        ))
+
+        # Получение идентификатора только что созданного мероприятия
+        cursor.execute("SELECT lastval()")
+        event_id = cursor.fetchone()[0]
+
+        # Вставка данных в таблицу event_participants
+        cursor.execute("""
+            INSERT INTO event_participants (user_id, event_id)
+            VALUES (%s, %s)
+        """, (
+            current_user.id,
+            event_id
         ))
 
         # Сохранение изменений в базе данных
         conn.commit()
 
-        flash('Event created successfully!', 'success')
-        return redirect(url_for('events_list'))
+        flash(f'{role.capitalize()} Event created successfully!', 'success')
+        return redirect(url_for('events'))
 
-    return render_template('create_event.html', form=form)
+    return render_template('volunteer_events.html', form=form)
+
+# Класс формы для создания мероприятия поисковиков
+class FinderEventForm(EventForm):
+    # Можно добавить дополнительные поля, специфичные для мероприятий поисковиков
+    pass
+
+# Создание мероприятия для поисковиков
+@app.route('/finder_events', methods=['GET', 'POST'])
+@login_required
+def finder_events():
+    form = FinderEventForm()  # Используем FinderEventForm
+
+    if form.validate_on_submit():
+        event_name = form.event_name.data
+        event_date = form.event_date.data
+
+        # Вставка данных в таблицу events
+        cursor.execute("""
+            INSERT INTO events (name, date, description, organizer_id, role)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            event_name,
+            event_date,
+            faker.text(),  # Пример описания, замените на реальное описание
+            current_user.id,
+            'finder'  # Указываем роль поисковика
+        ))
+
+        # Получение идентификатора только что созданного мероприятия
+        cursor.execute("SELECT lastval()")
+        event_id = cursor.fetchone()[0]
+
+        # Вставка данных в таблицу event_participants
+        cursor.execute("""
+            INSERT INTO event_participants (user_id, event_id)
+            VALUES (%s, %s)
+        """, (
+            current_user.id,
+            event_id
+        ))
+
+        # Сохранение изменений в базе данных
+        conn.commit()
+
+        flash('Finder Event created successfully!', 'success')
+        return redirect(url_for('events'))
+
+    return render_template('finder_events.html', form=form)
 
 # Обработчик ошибок
 @app.errorhandler(405)
