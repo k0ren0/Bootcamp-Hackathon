@@ -1,17 +1,18 @@
-# Добавлены поля first_name, last_name, city, phone_number в класс User
+from flask_login import UserMixin
+
 class User(UserMixin):
-    def __init__(self, id, username, password_hash, first_name, last_name, city, phone_number, role=None, additional_role=None):
+    def __init__(self, id, username, first_name, last_name, city, phone_number, role=None, additional_role=None, organized_events=None):
         self.id = id
         self.username = username
-        self.password_hash = password_hash
         self.first_name = first_name
         self.last_name = last_name
         self.city = city
         self.phone_number = phone_number
         self.role = role
         self.additional_role = additional_role
+        self.organized_events = organized_events if organized_events is not None else []
 
-# Изменена функция load_user для учета новых полей
+
 @login_manager.user_loader
 def load_user(user_id):
     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))

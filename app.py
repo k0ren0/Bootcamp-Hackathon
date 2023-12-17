@@ -1,15 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import check_password_hash
 import psycopg2
 from faker import Faker
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField 
 from wtforms.validators import InputRequired, ValidationError
 from wtforms import DateField
-from forms import RegistrationForm
-from datetime import datetime
-
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -53,24 +51,16 @@ def load_user(user_id):
 # Заглушка для хранения пользователей (вместо использования БД для простоты)
 users = {}
 
-@login_manager.user_loader
-def load_user(user_id):
-    return users.get(int(user_id))
+# @login_manager.user_loader
+# def load_user(user_id):
+#     return users.get(int(user_id))
 
 # Класс формы для создания ивента
-# Внесите следующие изменения в класс EventForm
 class EventForm(FlaskForm):
     event_name = StringField('Event Name', validators=[InputRequired()])
     event_date = DateField('Event Date', validators=[InputRequired()], format='%Y-%m-%d')
     role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
-    availability = StringField('Availability', validators=[InputRequired()])  # Новое поле
     submit = SubmitField('Create Event')
-
-    # Новое поле для указания свободных часов
-    availability = StringField('Availability', validators=[InputRequired()])
-
-    submit = SubmitField('Create Event')
-
 
 # Класс формы для регистрации
 class RegistrationFormCustom(FlaskForm):
@@ -83,8 +73,6 @@ class RegistrationFormCustom(FlaskForm):
         existing_user = cursor.fetchone()
         if existing_user:
             raise ValidationError('This username is already taken. Please choose a different one.')
-
-
 
 # Отображение главной страницы
 @app.route('/')
@@ -125,17 +113,17 @@ def register():
             additional_role = None
 
             cursor.execute("""
-                INSERT INTO users (username, password_hash, first_name, last_name, city, phone_number, role, additional_role)
+                INSERT INTO users (username, first_name, last_name, city, phone_number, role, additional_role, password_hash)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 username,
-                hashed_password,
                 faker.first_name(),
                 faker.last_name(),
                 faker.city(),
                 faker.phone_number(),
                 role,
-                additional_role
+                additional_role,
+                hashed_password
             ))
 
             conn.commit()
@@ -154,7 +142,6 @@ def register():
 
     return render_template('register.html', form=form)
 
-
 # # Удаление старой таблицы users (с учетом зависимостей)
 # cursor.execute("DROP TABLE IF EXISTS users CASCADE")
 
@@ -163,13 +150,13 @@ cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
         first_name VARCHAR(255),
         last_name VARCHAR(255),
         city VARCHAR(255),
         phone_number VARCHAR(50),
         role VARCHAR(10) NOT NULL,
-        additional_role VARCHAR(10)
+        additional_role VARCHAR(10),
+        password_hash VARCHAR(255) NOT NULL
     )
 """)
 
@@ -181,11 +168,9 @@ cursor.execute("""
         date DATE NOT NULL,
         description TEXT,
         organizer_id INTEGER REFERENCES users(id),
-        role VARCHAR(20) NOT NULL,
-        availability VARCHAR(255)  -- Добавленное поле для свободных часов
+        role VARCHAR(20) NOT NULL
     )
 """)
-
 
 # Сохранение изменений в базе данных
 conn.commit()
@@ -194,14 +179,14 @@ conn.commit()
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form['username']
+        password = request.form['password']
 
         # Проверка пользователя в базе данных
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
         user_data = cursor.fetchone()
 
-        if user_data and bcrypt.check_password_hash(user_data[2], password):
+        if user_data and bcrypt.check_password_hash(user_data[-1], password):
             user = User(id=user_data[0], username=user_data[1])
             login_user(user)
 
@@ -241,32 +226,6 @@ def events_list():
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
-# Отображение мероприятий для волонтеров
-@app.route('/events/volunteer', methods=['GET'])
-@login_required
-def volunteer_events():
-    try:
-        cursor.execute("SELECT * FROM events WHERE role = 'volunteer'")
-        events = cursor.fetchall()
-        return render_template('events.html', events=events)
-    except Exception as e:
-        print(f"Error: {e}")
-        return render_template('error.html', error_message=str(e))
-
-# Отображение мероприятий для поисковиков
-@app.route('/events/finder', methods=['GET'])
-@login_required
-def finder_events():
-    try:
-        cursor.execute("SELECT * FROM events WHERE role = 'finder'")
-        events = cursor.fetchall()
-        return render_template('events.html', events=events)
-    except Exception as e:
-        print(f"Error: {e}")
-        return render_template('error.html', error_message=str(e))
-
-
-
 # Создание мероприятия
 @app.route('/create_event', methods=['GET', 'POST'])
 @login_required
@@ -277,20 +236,20 @@ def create_event():
         event_name = form.event_name.data
         event_date = form.event_date.data
         role = form.role.data
-        availability = form.availability.data
 
+        # Вставка данных в таблицу events
         cursor.execute("""
-            INSERT INTO events (name, date, description, organizer_id, role, availability)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO events (name, date, description, organizer_id, role)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             event_name,
             event_date,
             faker.text(),
             current_user.id,
-            role,
-            availability
+            role
         ))
 
+        # Сохранение изменений в базе данных
         conn.commit()
 
         flash('Event created successfully!', 'success')
