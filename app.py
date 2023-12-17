@@ -68,6 +68,7 @@ class RegistrationFormCustom(FlaskForm):
     password = PasswordField('Password', validators=[InputRequired()])
     submit = SubmitField('Register')
 
+
     def validate_username(self, field):
         cursor.execute("SELECT id FROM users WHERE username = %s", (field.data,))
         existing_user = cursor.fetchone()
@@ -109,8 +110,22 @@ def register():
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
             # Используйте конкретные значения для роли и дополнительной роли
-            role = 'volunteer'
+            role = 'user'
             additional_role = None
+
+            # cursor.execute("""
+            #     INSERT INTO users (username, first_name, last_name, city, phone_number, role, additional_role, password_hash)
+            #     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            # """, (
+            #     username,
+            #     faker.first_name(),
+            #     faker.last_name(),
+            #     faker.city(),
+            #     faker.phone_number(),
+            #     role,
+            #     additional_role,
+            #     hashed_password
+            # ))
 
             cursor.execute("""
                 INSERT INTO users (username, first_name, last_name, city, phone_number, role, additional_role, password_hash)
@@ -121,8 +136,8 @@ def register():
                 faker.last_name(),
                 faker.city(),
                 faker.phone_number(),
-                role,
-                additional_role,
+                'user',  # Роль по умолчанию
+                None,    # Дополнительная роль по умолчанию
                 hashed_password
             ))
 
@@ -211,7 +226,30 @@ def logout():
 @app.route('/profile')
 @login_required
 def profile():
-    return render_template('profile.html', user=current_user)
+    try:
+        # Получение данных о пользователе из базы данных
+        cursor.execute("SELECT * FROM users WHERE id = %s", (current_user.id,))
+        user_data = cursor.fetchone()
+
+        if user_data:
+            user = User(id=user_data[0], username=user_data[1], role=user_data[6], additional_role=user_data[7])
+
+            # Добавим дополнительные данные из базы данных
+            user.first_name = user_data[2]
+            user.last_name = user_data[3]
+            user.city = user_data[4]
+            user.phone_number = user_data[5]
+
+            return render_template('profile.html', user=user)
+        else:
+            flash('User not found.', 'danger')
+            return redirect(url_for('index'))
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return render_template('error.html', error_message=str(e))
+
+
 
 # Отображение списка мероприятий
 @app.route('/events', methods=['GET'])
