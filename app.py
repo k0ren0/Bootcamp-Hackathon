@@ -9,7 +9,8 @@ from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import InputRequired, ValidationError
 from wtforms import DateField
 from flask_login import current_user
-from forms import VolunteerEventForm, FinderEventForm  # Import your form classes
+from forms import VolunteerEventForm, FinderEventForm  
+from wtforms.validators import Optional
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -59,6 +60,12 @@ class EventForm(FlaskForm):
     event_date = DateField('Event Date', validators=[InputRequired()], format='%Y-%m-%d')
     role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
     submit = SubmitField('Create Event')
+
+# FilterForm
+class EventFilterForm(FlaskForm):
+    start_date = DateField('Start Date', format='%Y-%m-%d', validators=[Optional()])
+    end_date = DateField('End Date', format='%Y-%m-%d', validators=[Optional()])
+    submit = SubmitField('Filter')
 
 # Registration form class
 class RegistrationFormCustom(FlaskForm):
@@ -256,14 +263,14 @@ def profile():
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
+# Fetch events from the database
 @app.route('/events', methods=['GET', 'POST'])
 @login_required
 def events():
-    # Fetch events from the database (replace with your actual query)
     cursor.execute("SELECT * FROM events")
     events = cursor.fetchall()
 
-    form = VolunteerEventForm()  # You may need to create a separate form for finder events
+    form = VolunteerEventForm()
 
     if form.validate_on_submit():
         # Handle form submission (insert data into the database)
