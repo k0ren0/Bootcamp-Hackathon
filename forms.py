@@ -11,3 +11,8 @@ class VolunteerEventForm(FlaskForm):
 class FinderEventForm(FlaskForm):
     # Add FinderEventForm fields if needed
     pass
+
+class EventFilterForm(FlaskForm):
+    start_date = DateField('Start Date', format='%Y-%m-%d')
+    end_date = DateField('End Date', format='%Y-%m-%d')
+    submit = SubmitField('Filter')

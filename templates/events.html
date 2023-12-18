@@ -5,7 +5,7 @@
 {% block styles %}
   {{ super() }}
   <style>
-    /* Styles added for distinguishing events by roles */
+    /* Styles for distinguishing events by roles */
     .volunteer-events {
       display: none;
     }
@@ -18,7 +18,18 @@
 {% block content %}
     <h2>Events</h2>
 
-    <!-- Tabs added for volunteer and finder events -->
+    <!-- Date filtering form -->
+    <form id="date-filter-form">
+        <label for="start-date">Start Date:</label>
+        <input type="date" id="start-date" name="start_date">
+
+        <label for="end-date">End Date:</label>
+        <input type="date" id="end-date" name="end_date">
+
+        <button type="button" onclick="filterEvents()">Filter</button>
+    </form>
+
+    <!-- Tabs for volunteer and finder events -->
     <ul class="nav nav-tabs" id="myTabs">
         <li class="nav-item">
             <a class="nav-link active" id="all-events-tab" data-bs-toggle="tab" href="#all-events">All Events</a>
@@ -30,13 +41,32 @@
             <a class="nav-link" id="finder-events-tab" data-bs-toggle="tab" href="#finder_events">Finder Events</a>
         </li>
     </ul>
+    <div class="tab-content">
         <div class="tab-pane fade" id="volunteer_events">
-            <!-- Code inserted to display volunteer events -->
+            <!-- Code to display volunteer events -->
             {% include 'volunteer_events.html' %}
         </div>
         <div class="tab-pane fade" id="finder_events">
-            <!-- Code inserted to display finder events -->
+            <!-- Code to display finder events -->
             {% include 'finder_events.html' %}
         </div>
     </div>
+
+    <script>
+        function filterEvents() {
+            var startDate = document.getElementById('start-date').value;
+            var endDate = document.getElementById('end-date').value;
+
+            // Iterate through all events and show/hide them based on the date
+            var allEvents = document.querySelectorAll('.your-event-class');  // Replace 'your-event-class' with the class of your events
+            allEvents.forEach(function(event) {
+                var eventDate = event.getAttribute('data-your-date-attribute');  // Replace 'data-your-date-attribute' with the attribute containing the event date
+                if (eventDate >= startDate && eventDate <= endDate) {
+                    event.style.display = 'block';
+                } else {
+                    event.style.display = 'none';
+                }
+            });
+        }
+    </script>
 {% endblock %}
