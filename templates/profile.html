@@ -21,7 +21,7 @@
         <div class="tab-pane fade show active" id="all-events">
 
 
-            <!-- Form added for creating a new event -->
+            
             <h3>Create a new event:</h3>
             <form method="POST" action="{{ url_for('profile') }}">
                 {{ event_form.csrf_token }}
@@ -41,7 +41,7 @@
             </form>
         </div>
 
-        <!-- Added block to display events organized by the user -->
+        
         <div class="tab-pane fade" id="organized-events">
             <h3>Events organized by you:</h3>
             <table class="table">
@@ -64,7 +64,7 @@
             </table>
         </div>
 
-        <!-- Added block to display events in which the user is participating -->
+        
         <div class="tab-pane fade" id="participating-events">
             <h3>Events you are participating in:</h3>
             <table class="table">

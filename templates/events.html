@@ -18,7 +18,7 @@
 {% block content %}
     <h2>Events</h2>
 
-    <!-- Date filtering form with date picker -->
+    
     <form id="date-filter-form">
         <label for="start-date">Start Date:</label>
         <input type="date" id="start-date" name="start_date">
@@ -29,7 +29,7 @@
         <button type="button" onclick="filterEvents()">Filter</button>
     </form>
 
-    <!-- Tabs for volunteer and finder events -->
+    
     <ul class="nav nav-tabs" id="myTabs">
         <li class="nav-item">
             <a class="nav-link active" id="all-events-tab" data-bs-toggle="tab" href="#all-events">All Events</a>
@@ -43,11 +43,11 @@
     </ul>
     <div class="tab-content">
         <div class="tab-pane fade" id="volunteer_events">
-            <!-- Code to display volunteer events -->
+            
             {% include 'volunteer_events.html' %}
         </div>
         <div class="tab-pane fade" id="finder_events">
-            <!-- Code to display finder events -->
+            
             {% include 'finder_events.html' %}
         </div>
     </div>
