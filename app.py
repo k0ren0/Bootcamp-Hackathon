@@ -10,13 +10,12 @@ from wtforms.validators import InputRequired, ValidationError
 from wtforms import DateField
 from flask_login import current_user
 
-
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Конфигурация подключения к PostgreSQL
+# PostgreSQL connection configuration
 db_config = {
     "dbname": "volunteer_dv",
     "user": "postgres",
@@ -25,16 +24,16 @@ db_config = {
     "port": 5432
 }
 
-# Подключение к PostgreSQL
+# Connecting to PostgreSQL
 conn = psycopg2.connect(**db_config)
 
-# Создание курсора для взаимодействия с базой данных
+# Creating a cursor for interacting with the database
 cursor = conn.cursor()
 
-# Создание экземпляра Faker
+# Creating an instance of Faker
 faker = Faker()
 
-# Класс для представления пользователя
+# Class to represent a user
 class User(UserMixin):
     def __init__(self, id, username, role=None, additional_role=None):
         self.id = id
@@ -50,26 +49,21 @@ def load_user(user_id):
         return User(id=user_data[0], username=user_data[1], role=user_data[6], additional_role=user_data[7])
     return None
 
-# Заглушка для хранения пользователей (вместо использования БД для простоты)
+# Placeholder for storing users (instead of using a database for simplicity)
 users = {}
 
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return users.get(int(user_id))
-
-# Класс формы для создания ивента
+# Form class for creating an event
 class EventForm(FlaskForm):
     event_name = StringField('Event Name', validators=[InputRequired()])
     event_date = DateField('Event Date', validators=[InputRequired()], format='%Y-%m-%d')
     role = SelectField('Role', choices=[('volunteer', 'Volunteer'), ('finder', 'Finder')], validators=[InputRequired()])
     submit = SubmitField('Create Event')
 
-# Класс формы для регистрации
+# Registration form class
 class RegistrationFormCustom(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
     password = PasswordField('Password', validators=[InputRequired()])
     submit = SubmitField('Register')
-
 
     def validate_username(self, field):
         cursor.execute("SELECT id FROM users WHERE username = %s", (field.data,))
@@ -77,22 +71,22 @@ class RegistrationFormCustom(FlaskForm):
         if existing_user:
             raise ValidationError('This username is already taken. Please choose a different one.')
 
-# Отображение главной страницы
+# Displaying the main page
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Отображение страницы "О нас"
+# Displaying the "About Us" page
 @app.route('/about')
 def about():
     return render_template('about.html')
 
-# Отображение страницы "Контакты"
+# Displaying the "Contact" page
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
 
-# Отображение страницы регистрации
+# Displaying the registration page
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationFormCustom()
@@ -111,23 +105,9 @@ def register():
 
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-            # Используйте конкретные значения для роли и дополнительной роли
+            # Use specific values for role and additional role
             role = 'user'
             additional_role = None
-
-            # cursor.execute("""
-            #     INSERT INTO users (username, first_name, last_name, city, phone_number, role, additional_role, password_hash)
-            #     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            # """, (
-            #     username,
-            #     faker.first_name(),
-            #     faker.last_name(),
-            #     faker.city(),
-            #     faker.phone_number(),
-            #     role,
-            #     additional_role,
-            #     hashed_password
-            # ))
 
             cursor.execute("""
                 INSERT INTO users (username, first_name, last_name, city, phone_number, role, additional_role, password_hash)
@@ -138,8 +118,8 @@ def register():
                 faker.last_name(),
                 faker.city(),
                 faker.phone_number(),
-                'user',  # Роль по умолчанию
-                None,    # Дополнительная роль по умолчанию
+                role,
+                additional_role,
                 hashed_password
             ))
 
@@ -159,59 +139,26 @@ def register():
 
     return render_template('register.html', form=form)
 
-# # Удаление старой таблицы users (с учетом зависимостей)
-# cursor.execute("DROP TABLE IF EXISTS users CASCADE")
+# Creating a new users table
+cursor.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(255) NOT NULL, first_name VARCHAR(255), last_name VARCHAR(255), city VARCHAR(255), phone_number VARCHAR(50), role VARCHAR(10) NOT NULL, additional_role VARCHAR(10), password_hash VARCHAR(255) NOT NULL)")
 
-# Создание новой таблицы users
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(255) NOT NULL,
-        first_name VARCHAR(255),
-        last_name VARCHAR(255),
-        city VARCHAR(255),
-        phone_number VARCHAR(50),
-        role VARCHAR(10) NOT NULL,
-        additional_role VARCHAR(10),
-        password_hash VARCHAR(255) NOT NULL
-    )
-""")
+# Creating a new events table
+cursor.execute("CREATE TABLE IF NOT EXISTS events (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, date DATE NOT NULL, description TEXT, organizer_id INTEGER REFERENCES users(id), role VARCHAR(20) NOT NULL)")
 
-# Создание новой таблицы events
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS events (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        date DATE NOT NULL,
-        description TEXT,
-        organizer_id INTEGER REFERENCES users(id),  -- Внешний ключ для связи с пользователем
-        role VARCHAR(20) NOT NULL
-    );
-""")
+# Creating a new event_participants table
+cursor.execute("CREATE TABLE IF NOT EXISTS event_participants (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), event_id INTEGER REFERENCES events(id))")
 
-
-# Создание новой таблицы event_participants
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS event_participants (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),    -- Внешний ключ для связи с пользователем
-        event_id INTEGER REFERENCES events(id)   -- Внешний ключ для связи с мероприятием
-    );
-""")
-
-
-
-# Сохранение изменений в базе данных
+# Saving changes to the database
 conn.commit()
 
-# Вход пользователя
+# User login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
 
-        # Проверка пользователя в базе данных
+        # Checking the user in the database
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
         user_data = cursor.fetchone()
 
@@ -219,7 +166,7 @@ def login():
             user = User(id=user_data[0], username=user_data[1])
             login_user(user)
 
-            # Обновление заглушки users
+            # Updating the users placeholder
             users[user.id] = user
 
             flash('Login successful!', 'success')
@@ -229,32 +176,32 @@ def login():
 
     return render_template('login.html')
 
-# Выход пользователя
+# User logout
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# Личный кабинет
+# User profile
 @app.route('/profile')
 @login_required
 def profile():
     try:
-        # Получение данных о пользователе из базы данных
+        # Getting user data from the database
         cursor.execute("SELECT * FROM users WHERE id = %s", (current_user.id,))
         user_data = cursor.fetchone()
 
         if user_data:
             user = User(id=user_data[0], username=user_data[1], role=user_data[6], additional_role=user_data[7])
 
-            # Добавим дополнительные данные из базы данных
+            # Adding additional data from the database
             user.first_name = user_data[2]
             user.last_name = user_data[3]
             user.city = user_data[4]
             user.phone_number = user_data[5]
 
-            # Получение мероприятий пользователя
+            # Getting user events
             cursor.execute("SELECT * FROM events WHERE organizer_id = %s", (current_user.id,))
             user_events = cursor.fetchall()
 
@@ -267,40 +214,36 @@ def profile():
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
-# @app.route('/events')
-# def events():
-#     return render_template('events.html')
-
-# Отображение списка мероприятий
+# Displaying the list of events
 @app.route('/events', methods=['GET', 'POST'])
 def events():
     try:
         if current_user.is_authenticated:
-            form = EventForm()  # Создание формы внутри условия
+            form = EventForm()  # Creating the form inside the condition
 
             if request.method == 'POST' and form.validate_on_submit():
-                # Обработка данных формы, если запрос типа POST
+                # Handling form data if the request type is POST
                 event_name = form.event_name.data
                 event_date = form.event_date.data
-                role = form.role.data  # Получаем выбранную роль
+                role = form.role.data  # Getting the selected role
 
-                # Вставка данных в таблицу events
+                # Inserting data into the events table
                 cursor.execute("""
                     INSERT INTO events (name, date, description, organizer_id, role)
                     VALUES (%s, %s, %s, %s, %s)
                 """, (
                     event_name,
                     event_date,
-                    faker.text(),  # Пример описания, замените на реальное описание
+                    faker.text(),  # Example description, replace with a real description
                     current_user.id,
-                    role  # Используем выбранную роль
+                    role  # Using the selected role
                 ))
 
-                # Получение идентификатора только что созданного мероприятия
+                # Getting the ID of the newly created event
                 cursor.execute("SELECT lastval()")
                 event_id = cursor.fetchone()[0]
 
-                # Вставка данных в таблицу event_participants
+                # Inserting data into the event_participants table
                 cursor.execute("""
                     INSERT INTO event_participants (user_id, event_id)
                     VALUES (%s, %s)
@@ -309,13 +252,13 @@ def events():
                     event_id
                 ))
 
-                # Сохранение изменений в базе данных
+                # Saving changes to the database
                 conn.commit()
 
                 flash(f'{role.capitalize()} Event created successfully!', 'success')
                 return redirect(url_for('events'))
 
-            # Получение данных о мероприятиях из базы данных в зависимости от роли пользователя
+            # Getting data about events from the database depending on the user's role
             if current_user.role == 'volunteer':
                 cursor.execute("""
                     SELECT e.* FROM events e
@@ -332,7 +275,7 @@ def events():
                 cursor.execute("SELECT * FROM events")
             events = cursor.fetchall()
 
-            # Получение данных о мероприятиях для волонтеров
+            # Getting data about events for volunteers
             cursor.execute("""
                 SELECT e.* FROM events e
                 JOIN event_participants ep ON e.id = ep.event_id
@@ -340,7 +283,7 @@ def events():
             """, (current_user.id,))
             volunteer_events = cursor.fetchall()
 
-            # Получение данных о мероприятиях для поисковиков
+            # Getting data about events for finders
             cursor.execute("""
                 SELECT e.* FROM events e
                 JOIN event_participants ep ON e.id = ep.event_id
@@ -356,39 +299,39 @@ def events():
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
-# Класс формы для создания мероприятия волонтеров
+# Form class for creating volunteer events
 class VolunteerEventForm(EventForm):
-    # Можно добавить дополнительные поля, специфичные для мероприятий волонтеров
+    # Additional fields specific to volunteer events can be added here
     pass
 
-# Создание мероприятия для волонтеров
+# Creating a volunteer event
 @app.route('/volunteer_events', methods=['GET', 'POST'])
 @login_required
 def volunteer_events():
-    form = VolunteerEventForm()  # Используем VolunteerEventForm
+    form = VolunteerEventForm()  # Using VolunteerEventForm
 
     if form.validate_on_submit():
         event_name = form.event_name.data
         event_date = form.event_date.data
-        role = form.role.data  # Получаем выбранную роль
+        role = form.role.data  # Getting the selected role
 
-        # Вставка данных в таблицу events
+        # Inserting data into the events table
         cursor.execute("""
             INSERT INTO events (name, date, description, organizer_id, role)
             VALUES (%s, %s, %s, %s, %s)
         """, (
             event_name,
             event_date,
-            faker.text(),  # Пример описания, замените на реальное описание
+            faker.text(),  # Example description, replace with a real description
             current_user.id,
-            role  # Используем выбранную роль
+            role  # Using the selected role
         ))
 
-        # Получение идентификатора только что созданного мероприятия
+        # Getting the ID of the newly created event
         cursor.execute("SELECT lastval()")
         event_id = cursor.fetchone()[0]
 
-        # Вставка данных в таблицу event_participants
+        # Inserting data into the event_participants table
         cursor.execute("""
             INSERT INTO event_participants (user_id, event_id)
             VALUES (%s, %s)
@@ -397,7 +340,7 @@ def volunteer_events():
             event_id
         ))
 
-        # Сохранение изменений в базе данных
+        # Saving changes to the database
         conn.commit()
 
         flash(f'{role.capitalize()} Event created successfully!', 'success')
@@ -405,38 +348,38 @@ def volunteer_events():
 
     return render_template('volunteer_events.html', form=form)
 
-# Класс формы для создания мероприятия поисковиков
+# Form class for creating finder events
 class FinderEventForm(EventForm):
-    # Можно добавить дополнительные поля, специфичные для мероприятий поисковиков
+    # Additional fields specific to finder events can be added here
     pass
 
-# Создание мероприятия для поисковиков
+# Creating a finder event
 @app.route('/finder_events', methods=['GET', 'POST'])
 @login_required
 def finder_events():
-    form = FinderEventForm()  # Используем FinderEventForm
+    form = FinderEventForm()  # Using FinderEventForm
 
     if form.validate_on_submit():
         event_name = form.event_name.data
         event_date = form.event_date.data
 
-        # Вставка данных в таблицу events
+        # Inserting data into the events table
         cursor.execute("""
             INSERT INTO events (name, date, description, organizer_id, role)
             VALUES (%s, %s, %s, %s, %s)
         """, (
             event_name,
             event_date,
-            faker.text(),  # Пример описания, замените на реальное описание
+            faker.text(),  # Example description, replace with a real description
             current_user.id,
-            'finder'  # Указываем роль поисковика
+            'finder'  # Specifying the finder role
         ))
 
-        # Получение идентификатора только что созданного мероприятия
+        # Getting the ID of the newly created event
         cursor.execute("SELECT lastval()")
         event_id = cursor.fetchone()[0]
 
-        # Вставка данных в таблицу event_participants
+        # Inserting data into the event_participants table
         cursor.execute("""
             INSERT INTO event_participants (user_id, event_id)
             VALUES (%s, %s)
@@ -445,7 +388,7 @@ def finder_events():
             event_id
         ))
 
-        # Сохранение изменений в базе данных
+        # Saving changes to the database
         conn.commit()
 
         flash('Finder Event created successfully!', 'success')
@@ -453,7 +396,7 @@ def finder_events():
 
     return render_template('finder_events.html', form=form)
 
-# Обработчик ошибок
+# Error handler
 @app.errorhandler(405)
 def handle_405_error(e):
     print(f"Error: {e}")

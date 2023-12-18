@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}События{% endblock %}
+{% block title %}Events{% endblock %}
 
 {% block styles %}
   <style>
-    /* Добавлены стили для разделения событий по ролям */
+    /* Styles added to differentiate events by roles */
     .volunteer-events {
       display: none;
     }
@@ -15,31 +15,31 @@
 {% endblock %}
 
 {% block content %}
-    <h2>События</h2>
+    <h2>Events</h2>
 
-    <!-- Добавлены вкладки для событий волонтеров и поисковиков -->
+    <!-- Tabs added for volunteer and finder events -->
     <ul class="nav nav-tabs" id="myTabs">
         <li class="nav-item">
-            <a class="nav-link active" id="all-events-tab" data-bs-toggle="tab" href="#all-events">Все события</a>
+            <a class="nav-link active" id="all-events-tab" data-bs-toggle="tab" href="#all-events">All Events</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" id="volunteer-events-tab" data-bs-toggle="tab" href="#volunteer_events">События для волонтеров</a>
+            <a class="nav-link" id="volunteer-events-tab" data-bs-toggle="tab" href="#volunteer_events">Volunteer Events</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" id="finder-events-tab" data-bs-toggle="tab" href="#finder_events">События для поисковиков</a>
+            <a class="nav-link" id="finder-events-tab" data-bs-toggle="tab" href="#finder_events">Finder Events</a>
         </li>
     </ul>
 
     <div class="tab-content">
         <div class="tab-pane fade show active" id="all-events">
-            <!-- Вставлен код для отображения всех мероприятий -->
-            <h3>Все мероприятия:</h3>
+            <!-- Inserted code to display all events -->
+            <h3>All Events:</h3>
             <table class="table">
-                <!-- ... (остальной код) ... -->
+                <!-- ... (remaining code) ... -->
             </table>
 
-            <!-- Добавлена форма для создания мероприятия -->
-            <h3>Создать новое мероприятие:</h3>
+            <!-- Added form for creating an event -->
+            <h3>Create a New Event:</h3>
             <form method="POST" action="{{ url_for('events') }}">
                 {{ form.csrf_token }}
                 <div class="form-group">
@@ -54,15 +54,15 @@
                     {{ form.role.label }}
                     {{ form.role(class="form-control") }}
                 </div>
-                <button type="submit" class="btn btn-primary">Создать</button>
+                <button type="submit" class="btn btn-primary">Create</button>
             </form>
         </div>
         <div class="tab-pane fade" id="volunteer_events">
-            <!-- Вставлен код для отображения мероприятий волонтеров -->
+            <!-- Inserted code to display volunteer events -->
             {% include 'volunteer_events.html' %}
         </div>
         <div class="tab-pane fade" id="finder_events">
-            <!-- Вставлен код для отображения мероприятий поисковиков -->
+            <!-- Inserted code to display finder events -->
             {% include 'finder_events.html' %}
         </div>
     </div>
