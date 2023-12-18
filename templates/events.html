@@ -18,55 +18,65 @@
 {% block content %}
     <h2>Events</h2>
 
-    
-    <form id="date-filter-form">
+    <!-- Форма фильтрации -->
+    <form method="post" action="{{ url_for('events') }}">
+        {{ form.csrf_token }}
         <label for="start-date">Start Date:</label>
         <input type="date" id="start-date" name="start_date">
 
         <label for="end-date">End Date:</label>
         <input type="date" id="end-date" name="end_date">
 
-        <button type="button" onclick="filterEvents()">Filter</button>
+        <button type="submit">Filter</button>
     </form>
 
-    
-    <ul class="nav nav-tabs" id="myTabs">
-        <li class="nav-item">
-            <a class="nav-link active" id="all-events-tab" data-bs-toggle="tab" href="#all-events">All Events</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="volunteer-events-tab" data-bs-toggle="tab" href="#volunteer_events">Volunteer Events</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="finder-events-tab" data-bs-toggle="tab" href="#finder_events">Finder Events</a>
-        </li>
-    </ul>
-    <div class="tab-content">
-        <div class="tab-pane fade" id="volunteer_events">
-            
-            {% include 'volunteer_events.html' %}
-        </div>
-        <div class="tab-pane fade" id="finder_events">
-            
-            {% include 'finder_events.html' %}
-        </div>
-    </div>
+    <!-- Таблица для отображения всех событий -->
+    <h3>All Events</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Event Name</th>
+                <th>Date</th>
+                <th>Description</th>
+                <!-- Добавьте больше столбцов при необходимости -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr class="your-event-class" data-your-date-attribute="{{ event[2] }}">
+                <!-- Замените 'your-event-class' и 'data-your-date-attribute' соответственно -->
+                <td>{{ event[1] }}</td>
+                <td>{{ event[2] }}</td>
+                <td>{{ event[3] }}</td>
+                <!-- Добавьте больше столбцов при необходимости -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-    <script>
-        function filterEvents() {
-            var startDate = document.getElementById('start-date').value;
-            var endDate = document.getElementById('end-date').value;
-
-            // Iterate through all events and show/hide them based on the date
-            var allEvents = document.querySelectorAll('.your-event-class');  // Replace 'your-event-class' with the class of your events
-            allEvents.forEach(function(event) {
-                var eventDate = event.getAttribute('data-your-date-attribute');  // Replace 'data-your-date-attribute' with the attribute containing the event date
-                if (eventDate >= startDate && eventDate <= endDate) {
-                    event.style.display = 'block';
-                } else {
-                    event.style.display = 'none';
-                }
-            });
-        }
-    </script>
+    <!-- Таблица для отображения совпадающих событий (если они есть) -->
+    {% if matching_events %}
+        <h3>Matching Events</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <!-- Добавьте больше столбцов при необходимости -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in matching_events %}
+                <tr class="your-event-class" data-your-date-attribute="{{ event[2] }}">
+                    <!-- Замените 'your-event-class' и 'data-your-date-attribute' соответственно -->
+                    <td>{{ event[1] }}</td>
+                    <td>{{ event[2] }}</td>
+                    <td>{{ event[3] }}</td>
+                    <!-- Добавьте больше столбцов при необходимости -->
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 {% endblock %}

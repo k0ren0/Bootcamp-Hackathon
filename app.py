@@ -35,19 +35,22 @@ faker = Faker()
 
 # Class to represent a user
 class User(UserMixin):
-    def __init__(self, id, username, role=None, additional_role=None):
+    def __init__(self, id, username, role=None, additional_role=None, city=None):
         self.id = id
         self.username = username
         self.role = role
         self.additional_role = additional_role
+        self.city = city
 
+@login_manager.user_loader
 @login_manager.user_loader
 def load_user(user_id):
     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
     user_data = cursor.fetchone()
     if user_data:
-        return User(id=user_data[0], username=user_data[1], role=user_data[6], additional_role=user_data[7])
+        return User(id=user_data[0], username=user_data[1], role=user_data[6], additional_role=user_data[7], city=user_data[4])
     return None
+
 
 # Placeholder for storing users (instead of using a database for simplicity)
 users = {}
@@ -63,6 +66,7 @@ class EventForm(FlaskForm):
 class EventFilterForm(FlaskForm):
     start_date = DateField('Start Date', format='%Y-%m-%d', validators=[Optional()])
     end_date = DateField('End Date', format='%Y-%m-%d', validators=[Optional()])
+    city = StringField('City', validators=[Optional()])
     submit = SubmitField('Filter')
 
 # Registration form class
@@ -167,7 +171,8 @@ CREATE TABLE IF NOT EXISTS events (
     date DATE NOT NULL,
     description TEXT,
     organizer_id INTEGER REFERENCES users(id),
-    role VARCHAR(20) NOT NULL
+    role VARCHAR(20) NOT NULL,
+    city VARCHAR(255)
 );
 """
 # Creating a new event_participants table
@@ -289,49 +294,33 @@ def profile():
 @app.route('/events', methods=['GET', 'POST'])
 @login_required
 def events():
+    form = EventFilterForm()
+
+    if request.method == 'POST':
+        # Получение данных из формы (если форма необходима для фильтрации)
+        start_date = form.start_date.data
+        end_date = form.end_date.data
+        user_city = form.city.data
+
+        # Выполнение SQL-запроса с учетом фильтрации по дате и городу
+        cursor.execute("""
+            SELECT *
+            FROM events
+            WHERE date BETWEEN %s AND %s
+                AND (city = %s OR %s IS NULL)
+        """, (start_date, end_date, user_city, user_city))
+
+        matching_events = cursor.fetchall()
+
+        return render_template('events.html', form=form, events=matching_events)
+
+    # Если это GET-запрос, отобразите форму для фильтрации
     cursor.execute("SELECT * FROM events")
     events = cursor.fetchall()
 
-    form = VolunteerEventForm()
+    return render_template('events.html', form=form, events=events, matching_events=None)
 
-    if form.validate_on_submit():
-        # Handle form submission (insert data into the database)
-        event_name = form.event_name.data
-        event_date = form.event_date.data
-        role = form.role.data
 
-        # Insert data into the events table
-        cursor.execute("""
-            INSERT INTO events (name, date, description, organizer_id, role)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            event_name,
-            event_date,
-            faker.text(),  # Example description, replace with a real description
-            current_user.id,
-            role  # Using the selected role
-        ))
-
-        # Getting the ID of the newly created event
-        cursor.execute("SELECT lastval()")
-        event_id = cursor.fetchone()[0]
-
-        # Inserting data into the event_participants table
-        cursor.execute("""
-            INSERT INTO event_participants (user_id, event_id)
-            VALUES (%s, %s)
-        """, (
-            current_user.id,
-            event_id
-        ))
-
-        # Saving changes to the database
-        conn.commit()
-
-        flash(f'{role.capitalize()} Event created successfully!', 'success')
-        return redirect(url_for('events'))
-
-    return render_template('events.html', form=form, events=events)
 
 @app.route('/volunteer_events', methods=['GET', 'POST'])
 @login_required
