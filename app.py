@@ -1,16 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_bcrypt import Bcrypt
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, UserMixin, current_user, login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash
 import psycopg2
 from faker import Faker
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField 
-from wtforms.validators import InputRequired, ValidationError
-from wtforms import DateField
-from flask_login import current_user
+from wtforms import StringField, PasswordField, SubmitField, SelectField, DateField
+from wtforms.validators import InputRequired, ValidationError, Optional
 from forms import VolunteerEventForm, FinderEventForm  
-from wtforms.validators import Optional
+
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -148,14 +146,38 @@ def register():
     return render_template('register.html', form=form)
 
 # Creating a new users table
-cursor.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(255) NOT NULL, first_name VARCHAR(255), last_name VARCHAR(255), city VARCHAR(255), phone_number VARCHAR(50), role VARCHAR(10) NOT NULL, additional_role VARCHAR(10), password_hash VARCHAR(255) NOT NULL)")
-
+create_users_table_query = """
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    city VARCHAR(255),
+    phone_number VARCHAR(50),
+    role VARCHAR(10) NOT NULL,
+    additional_role VARCHAR(10),
+    password_hash VARCHAR(255) NOT NULL
+);
+"""
 # Creating a new events table
-cursor.execute("CREATE TABLE IF NOT EXISTS events (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, date DATE NOT NULL, description TEXT, organizer_id INTEGER REFERENCES users(id), role VARCHAR(20) NOT NULL)")
-
+create_events_table_query = """
+CREATE TABLE IF NOT EXISTS events (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    date DATE NOT NULL,
+    description TEXT,
+    organizer_id INTEGER REFERENCES users(id),
+    role VARCHAR(20) NOT NULL
+);
+"""
 # Creating a new event_participants table
-cursor.execute("CREATE TABLE IF NOT EXISTS event_participants (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), event_id INTEGER REFERENCES events(id))")
-
+create_event_participants_table_query = """
+CREATE TABLE IF NOT EXISTS event_participants (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    event_id INTEGER REFERENCES events(id)
+);
+"""
 # Saving changes to the database
 conn.commit()
 
