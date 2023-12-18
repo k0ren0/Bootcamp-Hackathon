@@ -9,6 +9,7 @@ from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import InputRequired, ValidationError
 from wtforms import DateField
 from flask_login import current_user
+from forms import VolunteerEventForm, FinderEventForm  # Import your form classes
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -183,8 +184,9 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+
 # User profile
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     try:
@@ -205,27 +207,14 @@ def profile():
             cursor.execute("SELECT * FROM events WHERE organizer_id = %s", (current_user.id,))
             user_events = cursor.fetchall()
 
-            return render_template('profile.html', user=user, user_events=user_events)
-        else:
-            flash('User not found.', 'danger')
-            return redirect(url_for('index'))
+            # Creating EventForm instance
+            event_form = EventForm()
 
-    except Exception as e:
-        print(f"Error: {e}")
-        return render_template('error.html', error_message=str(e))
-
-# Displaying the list of events
-@app.route('/events', methods=['GET', 'POST'])
-def events():
-    try:
-        if current_user.is_authenticated:
-            form = EventForm()  # Creating the form inside the condition
-
-            if request.method == 'POST' and form.validate_on_submit():
-                # Handling form data if the request type is POST
-                event_name = form.event_name.data
-                event_date = form.event_date.data
-                role = form.role.data  # Getting the selected role
+            # Handling event creation form submission
+            if event_form.validate_on_submit():
+                event_name = event_form.event_name.data
+                event_date = event_form.event_date.data
+                role = event_form.role.data
 
                 # Inserting data into the events table
                 cursor.execute("""
@@ -256,66 +245,33 @@ def events():
                 conn.commit()
 
                 flash(f'{role.capitalize()} Event created successfully!', 'success')
-                return redirect(url_for('events'))
+                return redirect(url_for('profile'))
 
-            # Getting data about events from the database depending on the user's role
-            if current_user.role == 'volunteer':
-                cursor.execute("""
-                    SELECT e.* FROM events e
-                    JOIN event_participants ep ON e.id = ep.event_id
-                    WHERE e.role = 'volunteer' AND ep.user_id = %s
-                """, (current_user.id,))
-            elif current_user.role == 'finder':
-                cursor.execute("""
-                    SELECT e.* FROM events e
-                    JOIN event_participants ep ON e.id = ep.event_id
-                    WHERE e.role = 'finder' AND ep.user_id = %s
-                """, (current_user.id,))
-            else:
-                cursor.execute("SELECT * FROM events")
-            events = cursor.fetchall()
-
-            # Getting data about events for volunteers
-            cursor.execute("""
-                SELECT e.* FROM events e
-                JOIN event_participants ep ON e.id = ep.event_id
-                WHERE e.role = 'volunteer' AND ep.user_id = %s
-            """, (current_user.id,))
-            volunteer_events = cursor.fetchall()
-
-            # Getting data about events for finders
-            cursor.execute("""
-                SELECT e.* FROM events e
-                JOIN event_participants ep ON e.id = ep.event_id
-                WHERE e.role = 'finder' AND ep.user_id = %s
-            """, (current_user.id,))
-            finder_events = cursor.fetchall()
-
-            return render_template('events.html', events=events, volunteer_events=volunteer_events, finder_events=finder_events, form=form)
+            return render_template('profile.html', user=user, user_events=user_events, event_form=event_form)
         else:
-            flash('Please log in to view events.', 'info')
-            return redirect(url_for('login'))
+            flash('User not found.', 'danger')
+            return redirect(url_for('index'))
+
     except Exception as e:
         print(f"Error: {e}")
         return render_template('error.html', error_message=str(e))
 
-# Form class for creating volunteer events
-class VolunteerEventForm(EventForm):
-    # Additional fields specific to volunteer events can be added here
-    pass
-
-# Creating a volunteer event
-@app.route('/volunteer_events', methods=['GET', 'POST'])
+@app.route('/events', methods=['GET', 'POST'])
 @login_required
-def volunteer_events():
-    form = VolunteerEventForm()  # Using VolunteerEventForm
+def events():
+    # Fetch events from the database (replace with your actual query)
+    cursor.execute("SELECT * FROM events")
+    events = cursor.fetchall()
+
+    form = VolunteerEventForm()  # You may need to create a separate form for finder events
 
     if form.validate_on_submit():
+        # Handle form submission (insert data into the database)
         event_name = form.event_name.data
         event_date = form.event_date.data
-        role = form.role.data  # Getting the selected role
+        role = form.role.data
 
-        # Inserting data into the events table
+        # Insert data into the events table
         cursor.execute("""
             INSERT INTO events (name, date, description, organizer_id, role)
             VALUES (%s, %s, %s, %s, %s)
@@ -346,24 +302,69 @@ def volunteer_events():
         flash(f'{role.capitalize()} Event created successfully!', 'success')
         return redirect(url_for('events'))
 
-    return render_template('volunteer_events.html', form=form)
+    return render_template('events.html', form=form, events=events)
 
-# Form class for creating finder events
-class FinderEventForm(EventForm):
-    # Additional fields specific to finder events can be added here
-    pass
+@app.route('/volunteer_events', methods=['GET', 'POST'])
+@login_required
+def volunteer_events():
+    cursor.execute("SELECT * FROM events")
+    events = cursor.fetchall()
 
-# Creating a finder event
+    form = VolunteerEventForm()
+
+    if form.validate_on_submit():
+        # Handle form submission (insert data into the database)
+        event_name = form.event_name.data
+        event_date = form.event_date.data
+        role = form.role.data
+
+        # Insert data into the events table
+        cursor.execute("""
+            INSERT INTO events (name, date, description, organizer_id, role)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            event_name,
+            event_date,
+            faker.text(),  # Example description, replace with a real description
+            current_user.id,
+            role  # Using the selected role
+        ))
+
+        # Getting the ID of the newly created event
+        cursor.execute("SELECT lastval()")
+        event_id = cursor.fetchone()[0]
+
+        # Inserting data into the event_participants table
+        cursor.execute("""
+            INSERT INTO event_participants (user_id, event_id)
+            VALUES (%s, %s)
+        """, (
+            current_user.id,
+            event_id
+        ))
+
+        # Saving changes to the database
+        conn.commit()
+
+        flash(f'{role.capitalize()} Event created successfully!', 'success')
+        return redirect(url_for('events'))
+
+    return render_template('volunteer_events.html', form=form, events=events)
+
 @app.route('/finder_events', methods=['GET', 'POST'])
 @login_required
 def finder_events():
-    form = FinderEventForm()  # Using FinderEventForm
+    cursor.execute("SELECT * FROM events")
+    events = cursor.fetchall()
+
+    form = FinderEventForm()
 
     if form.validate_on_submit():
+        # Handle form submission (insert data into the database)
         event_name = form.event_name.data
         event_date = form.event_date.data
 
-        # Inserting data into the events table
+        # Insert data into the events table
         cursor.execute("""
             INSERT INTO events (name, date, description, organizer_id, role)
             VALUES (%s, %s, %s, %s, %s)
@@ -394,7 +395,7 @@ def finder_events():
         flash('Finder Event created successfully!', 'success')
         return redirect(url_for('events'))
 
-    return render_template('finder_events.html', form=form)
+    return render_template('finder_events.html', form=form, events=events)
 
 # Error handler
 @app.errorhandler(405)

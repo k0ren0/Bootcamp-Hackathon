@@ -17,52 +17,74 @@
         {% endif %}
     </ul>
 
-    <!-- Added block to display events organized by the user -->
-    <h3>Events Organized by You:</h3>
-    <table class="table">
-        <thead>
-            <tr>
-                <th scope="col">Event Name</th>
-                <th scope="col">Event Date</th>
-                <th scope="col">Description</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for event in user.organized_events %}
-                <tr>
-                    <td>{{ event.name }}</td>
-                    <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
-                    <td>{{ event.description }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="all-events">
 
-    <!-- Added block to display events in which the user participates -->
-    <h3>Events You Participate In:</h3>
-    <table class="table">
-        <thead>
-            <tr>
-                <th scope="col">Event Name</th>
-                <th scope="col">Event Date</th>
-                <th scope="col">Description</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for event in user.participating_events %}
-                <tr>
-                    <td>{{ event.name }}</td>
-                    <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
-                    <td>{{ event.description }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
 
-    <!-- <p>Debugging Information:</p>
-    <p><strong>User ID:</strong> {{ user.id }}</p>
-    <p><strong>User Role:</strong> {{ user.role }}</p>
-    <p><strong>User Additional Role:</strong> {{ user.additional_role }}</p>
-    <p><strong>Organized Events:</strong> {{ user.organized_events }}</p>
-    <p><strong>Participating Events:</strong> {{ user.participating_events }}</p> -->
+            <!-- Form added for creating a new event -->
+            <h3>Create a new event:</h3>
+            <form method="POST" action="{{ url_for('profile') }}">
+                {{ event_form.csrf_token }}
+                <div class="form-group">
+                    {{ event_form.event_name.label }}
+                    {{ event_form.event_name(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ event_form.event_date.label }}
+                    {{ event_form.event_date(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ event_form.role.label }}
+                    {{ event_form.role(class="form-control") }}
+                </div>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </form>
+        </div>
+
+        <!-- Added block to display events organized by the user -->
+        <div class="tab-pane fade" id="organized-events">
+            <h3>Events organized by you:</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Event Name</th>
+                        <th scope="col">Event Date</th>
+                        <th scope="col">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in user.organized_events %}
+                        <tr>
+                            <td>{{ event.name }}</td>
+                            <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ event.description }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Added block to display events in which the user is participating -->
+        <div class="tab-pane fade" id="participating-events">
+            <h3>Events you are participating in:</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Event Name</th>
+                        <th scope="col">Event Date</th>
+                        <th scope="col">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in user.participating_events %}
+                        <tr>
+                            <td>{{ event.name }}</td>
+                            <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ event.description }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 {% endblock %}

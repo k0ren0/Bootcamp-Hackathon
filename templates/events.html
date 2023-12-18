@@ -3,8 +3,9 @@
 {% block title %}Events{% endblock %}
 
 {% block styles %}
+  {{ super() }}
   <style>
-    /* Styles added to differentiate events by roles */
+    /* Styles added for distinguishing events by roles */
     .volunteer-events {
       display: none;
     }
@@ -29,40 +30,12 @@
             <a class="nav-link" id="finder-events-tab" data-bs-toggle="tab" href="#finder_events">Finder Events</a>
         </li>
     </ul>
-
-    <div class="tab-content">
-        <div class="tab-pane fade show active" id="all-events">
-            <!-- Inserted code to display all events -->
-            <h3>All Events:</h3>
-            <table class="table">
-                <!-- ... (remaining code) ... -->
-            </table>
-
-            <!-- Added form for creating an event -->
-            <h3>Create a New Event:</h3>
-            <form method="POST" action="{{ url_for('events') }}">
-                {{ form.csrf_token }}
-                <div class="form-group">
-                    {{ form.event_name.label }}
-                    {{ form.event_name(class="form-control") }}
-                </div>
-                <div class="form-group">
-                    {{ form.event_date.label }}
-                    {{ form.event_date(class="form-control") }}
-                </div>
-                <div class="form-group">
-                    {{ form.role.label }}
-                    {{ form.role(class="form-control") }}
-                </div>
-                <button type="submit" class="btn btn-primary">Create</button>
-            </form>
-        </div>
         <div class="tab-pane fade" id="volunteer_events">
-            <!-- Inserted code to display volunteer events -->
+            <!-- Code inserted to display volunteer events -->
             {% include 'volunteer_events.html' %}
         </div>
         <div class="tab-pane fade" id="finder_events">
-            <!-- Inserted code to display finder events -->
+            <!-- Code inserted to display finder events -->
             {% include 'finder_events.html' %}
         </div>
     </div>
