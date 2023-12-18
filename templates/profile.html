@@ -1,5 +1,3 @@
-<!-- Ваш файл profile.html -->
-
 {% extends 'base.html' %}
 
 {% block title %}Profile{% endblock %}
@@ -40,10 +38,32 @@
         </tbody>
     </table>
 
+    <!-- Добавлен блок для отображения мероприятий, в которых участвует пользователь -->
+    <h3>Events You Participate In:</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Event Name</th>
+                <th scope="col">Event Date</th>
+                <th scope="col">Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in user.participating_events %}
+                <tr>
+                    <td>{{ event.name }}</td>
+                    <td>{{ event.date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ event.description }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
     <!-- Добавьте следующие строки для отладки -->
     <!-- <p>Debugging Information:</p>
     <p><strong>User ID:</strong> {{ user.id }}</p>
     <p><strong>User Role:</strong> {{ user.role }}</p>
     <p><strong>User Additional Role:</strong> {{ user.additional_role }}</p>
-    <p><strong>Organized Events:</strong> {{ user.organized_events }}</p> -->
+    <p><strong>Organized Events:</strong> {{ user.organized_events }}</p>
+    <p><strong>Participating Events:</strong> {{ user.participating_events }}</p> -->
 {% endblock %}

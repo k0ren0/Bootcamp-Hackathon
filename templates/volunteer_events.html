@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Create Event{% endblock %}
+{% block title %}Volunteer Events{% endblock %}
 
 {% block content %}
-    <h2>Create Event</h2>
-    <form method="POST" action="{{ url_for('create_event') }}">
+    <h2>Create Volunteer Event</h2>
+
+    <!-- Используйте правильное имя переменной для формы -->
+    <form method="POST" action="{{ url_for('volunteer_events') }}">
         {{ form.hidden_tag() }}
         <div class="form-group">
             {{ form.event_name.label }}
@@ -18,6 +20,7 @@
             {{ form.role.label }}
             {{ form.role(class="form-control") }}
         </div>
-        <button type="submit" class="btn btn-primary">Create Event</button>
+        <button type="submit" class="btn btn-primary">Create Volunteer Event</button>
     </form>
 {% endblock %}
+
