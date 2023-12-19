@@ -18,7 +18,6 @@
 {% block content %}
     <h2>Events</h2>
 
-    <!-- Форма фильтрации -->
     <form method="post" action="{{ url_for('events') }}">
         {{ form.csrf_token }}
         <label for="start-date">Start Date:</label>
@@ -30,7 +29,6 @@
         <button type="submit">Filter</button>
     </form>
 
-    <!-- Таблица для отображения всех событий -->
     <h3>All Events</h3>
     <table>
         <thead>
@@ -38,23 +36,23 @@
                 <th>Event Name</th>
                 <th>Date</th>
                 <th>Description</th>
-                <!-- Добавьте больше столбцов при необходимости -->
+                
             </tr>
         </thead>
         <tbody>
             {% for event in events %}
             <tr class="your-event-class" data-your-date-attribute="{{ event[2] }}">
-                <!-- Замените 'your-event-class' и 'data-your-date-attribute' соответственно -->
+                
                 <td>{{ event[1] }}</td>
                 <td>{{ event[2] }}</td>
                 <td>{{ event[3] }}</td>
-                <!-- Добавьте больше столбцов при необходимости -->
+                
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <!-- Таблица для отображения совпадающих событий (если они есть) -->
+   
     {% if matching_events %}
         <h3>Matching Events</h3>
         <table>
@@ -63,17 +61,17 @@
                     <th>Event Name</th>
                     <th>Date</th>
                     <th>Description</th>
-                    <!-- Добавьте больше столбцов при необходимости -->
+                    
                 </tr>
             </thead>
             <tbody>
                 {% for event in matching_events %}
                 <tr class="your-event-class" data-your-date-attribute="{{ event[2] }}">
-                    <!-- Замените 'your-event-class' и 'data-your-date-attribute' соответственно -->
+                    
                     <td>{{ event[1] }}</td>
                     <td>{{ event[2] }}</td>
                     <td>{{ event[3] }}</td>
-                    <!-- Добавьте больше столбцов при необходимости -->
+                    
                 </tr>
                 {% endfor %}
             </tbody>
