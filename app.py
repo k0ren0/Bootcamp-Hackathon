@@ -51,8 +51,7 @@ def load_user(user_id):
         return User(id=user_data[0], username=user_data[1], role=user_data[6], additional_role=user_data[7], city=user_data[4])
     return None
 
-
-# Placeholder for storing users (instead of using a database for simplicity)
+# Placeholder for storing users
 users = {}
 
 # Form class for creating an event
@@ -297,12 +296,12 @@ def events():
     form = EventFilterForm()
 
     if request.method == 'POST':
-        # Получение данных из формы (если форма необходима для фильтрации)
+        
         start_date = form.start_date.data
         end_date = form.end_date.data
         user_city = form.city.data
 
-        # Выполнение SQL-запроса с учетом фильтрации по дате и городу
+        # SQL-request
         cursor.execute("""
             SELECT *
             FROM events
@@ -314,7 +313,7 @@ def events():
 
         return render_template('events.html', form=form, events=matching_events)
 
-    # Если это GET-запрос, отобразите форму для фильтрации
+    # If it is a GET request, display the form for filtering
     cursor.execute("SELECT * FROM events")
     events = cursor.fetchall()
 
@@ -343,7 +342,7 @@ def volunteer_events():
         """, (
             event_name,
             event_date,
-            faker.text(),  # Example description, replace with a real description
+            faker.text(),  
             current_user.id,
             role  # Using the selected role
         ))
