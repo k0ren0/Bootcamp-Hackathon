@@ -17,11 +17,11 @@ login_manager.login_view = 'login'
 
 # PostgreSQL connection configuration
 db_config = {
-    "dbname": "volunteer_dv",
+    "dbname": "Antisemitism",
     "user": "postgres",
-    "password": "Fudo2303",
+    "password": "postgres",
     "host": "localhost",
-    "port": 5432
+    "port": 5433
 }
 
 # Connecting to PostgreSQL

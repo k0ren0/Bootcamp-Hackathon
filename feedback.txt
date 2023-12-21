@@ -1,0 +1,13 @@
+Viktor: Volunteers for animals care website with registration
+The project is working, it is made with Flask.
+Flask modules and methods were precisly implemented, the Database is working
+and the relationships between the tables is well implemented.
+OOP with decorator was used through Flask structure.
+I just wish you could use also json and API. 
+An idea for that would be an API to show the regions of volunteers in a map
+
+Python OOP:9/10
+Modules: 9/10
+Database:9/10
+JSON/API:0/10
+Overall: 7
