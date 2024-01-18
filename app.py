@@ -19,7 +19,7 @@ login_manager.login_view = 'login'
 db_config = {
     "dbname": "volunteer_dv",
     "user": "postgres",
-    "password": "Fudo2303",
+    "password": "*******3",
     "host": "localhost",
     "port": 5432
 }
